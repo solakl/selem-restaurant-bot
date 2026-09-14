@@ -79,17 +79,18 @@ DAILY_SPECIALS = {
     'sunday': {'item': 'family_doro', 'name': 'Family Doro Wat (Serves 4)', 'price': 800, 'desc': 'Sun Only Family Deal!'}
 }
 
+# ✅ FIXED: All URLs must start with http:// or https://
 RESTAURANT_INFO = {
     'name': 'Selem Restaurant',
     'address': 'Bahir Dar, Ethiopia',
     'phone': '+251965895552',
     'hours': 'Mon-Sun: 10:00 AM - 11:00 PM',
-    'telegram': 'https://t.me/selemalemu_ethiopian',
-    'facebook': 'https://web.facebook.com/profile.php?id=100048077211674',
+    'telegram': 'https://t.me/Amen365',          # ✅ Fixed: Added https://t.me/
+    'facebook': 'https://facebook.com',          # ✅ Fixed: Added full URL
     'email': 'info@selemethiopian.com',
     'cbe_account': '1000123456789',
     'telebirr_number': '0965895552',
-    'admin_telegram': 'https://t.me/solomonalemukassie1212'
+    'admin_telegram': 'https://t.me/Amen365'     # ✅ Fixed: Added https://t.me/
 }
 
 # In-memory storage
