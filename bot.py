@@ -3,9 +3,8 @@ import random
 import datetime
 import logging
 from telegram import (
-    Update, InlineKeyboardButton, InlineKeyboardMarkup, 
-    ReplyKeyboardMarkup, KeyboardButton, BotCommand,
-    BotCommandScopeDefault
+    Update, InlineKeyboardButton, InlineKeyboardMarkup,
+    BotCommand, BotCommandScopeDefault
 )
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters,
@@ -177,16 +176,6 @@ def get_cart_count(uid):
         return 0
     return sum(e["qty"] for e in user_orders[uid])
 
-# ==================== MAIN MENU (Reply Keyboard) ====================
-def main_menu_keyboard():
-    keyboard = [
-        [KeyboardButton("🍽️ Menu"), KeyboardButton("🛒 Order Now")],
-        [KeyboardButton("📸 Gallery"), KeyboardButton("🛒 My Cart")],
-        [KeyboardButton("ℹ️ About"), KeyboardButton("📍 Location")],
-        [KeyboardButton("📞 Contact"), KeyboardButton("❓ Help")],
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
-
 # ==================== START ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -201,7 +190,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👨‍🍳 Fresh ingredients • Traditional recipes\n"
         f"⭐ Rated {RESTAURANT_INFO['rating']}\n"
         f"🕐 Open {RESTAURANT_INFO['hours']}\n\n"
-        f"*Choose an option to get started:*"
+        f"👇 *Choose an option to get started:*"
     )
     
     inline_kb = [
@@ -214,16 +203,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("📍 Location", callback_data="location"),
             InlineKeyboardButton("📞 Contact", callback_data="contact")
-        ]
+        ],
+        [InlineKeyboardButton("❓ Help", callback_data="help")]
     ]
     
     await update.effective_message.reply_text(
         text,
-        reply_markup=main_menu_keyboard(),
-        parse_mode=ParseMode.MARKDOWN
-    )
-    await update.effective_message.reply_text(
-        "👇 *Quick Actions*",
         reply_markup=InlineKeyboardMarkup(inline_kb),
         parse_mode=ParseMode.MARKDOWN
     )
@@ -251,6 +236,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await show_location(update, context)
         elif data == "contact":
             await show_contact(update, context)
+        elif data == "help":
+            await help_command(update, context)
         elif data == "back_main":
             await back_to_main(update, context)
         elif data.startswith("category_"):
@@ -356,7 +343,7 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=ParseMode.MARKDOWN
         )
     except Exception:
-        # Fallback if message too long - send plain
+        # Fallback if message too long
         await update.effective_message.reply_text(
             "🍽️ *Full Menu*\n\nTap below to start ordering:",
             reply_markup=InlineKeyboardMarkup(kb),
@@ -725,6 +712,9 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             f"👨‍🍳 We'll prepare your order shortly.\n"
             f"🔔 You'll be notified when ready!\n\n"
             f"🙏 Thank you for choosing {RESTAURANT_INFO['name']}!",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠  Main Menu", callback_data="back_main")]
+            ]),
             parse_mode=ParseMode.MARKDOWN
         )
         
@@ -774,6 +764,10 @@ async def show_gallery(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"👨‍🍳 Made with love\n"
                     f"⭐ Rated {RESTAURANT_INFO['rating']}"
                 ),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔄  Another Photo", callback_data="gallery")],
+                    [InlineKeyboardButton("🏠  Main Menu", callback_data="back_main")]
+                ]),
                 parse_mode=ParseMode.MARKDOWN
             )
     except Exception as e:
@@ -877,8 +871,15 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("📍 Location", callback_data="location"),
             InlineKeyboardButton("📞 Contact", callback_data="contact")
-        ]
+        ],
+        [InlineKeyboardButton("❓ Help", callback_data="help")]
     ]
+    
+    # If cart has items, add quick resume button
+    if cart_count > 0:
+        inline_kb.insert(2, [
+            InlineKeyboardButton(f"⚡  Resume Cart ({cart_count})", callback_data="view_cart")
+        ])
     
     await update.effective_message.reply_text(
         text, reply_markup=InlineKeyboardMarkup(inline_kb), parse_mode=ParseMode.MARKDOWN
@@ -916,33 +917,26 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📞 Need help? Contact admin:\n"
         f"{RESTAURANT_INFO['admin_telegram']}"
     )
-    await update.effective_message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    kb = [[InlineKeyboardButton("🏠  Main Menu", callback_data="back_main")]]
+    await update.effective_message.reply_text(
+        text, reply_markup=InlineKeyboardMarkup(kb), parse_mode=ParseMode.MARKDOWN
+    )
 
 # ==================== TEXT MESSAGE HANDLER ====================
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle any plain text — politely redirect user."""
     text = update.message.text.strip()
     
-    if text == "🍽️ Menu":
-        await show_menu(update, context)
-    elif text == "🛒 Order Now":
-        await show_order_categories(update, context)
-    elif text == "📸 Gallery":
-        await show_gallery(update, context)
-    elif text == "🛒 My Cart":
-        await view_cart(update, context)
-    elif text == "ℹ️ About":
-        await show_about(update, context)
-    elif text == "📍 Location":
-        await show_location(update, context)
-    elif text == "📞 Contact":
-        await show_contact(update, context)
-    elif text == "❓ Help":
-        await help_command(update, context)
-    else:
-        await update.message.reply_text(
-            "🤔 I didn't understand that.\n\nUse the menu buttons below or type /help",
-            reply_markup=main_menu_keyboard()
-        )
+    await update.message.reply_text(
+        f"🤔 I didn't understand: *{text}*\n\n"
+        f"Please use the buttons below to navigate.\n"
+        f"Or type /help to see all commands.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠  Main Menu", callback_data="back_main")],
+            [InlineKeyboardButton("❓  Help", callback_data="help")]
+        ]),
+        parse_mode=ParseMode.MARKDOWN
+    )
 
 # ==================== SET BOT COMMANDS ====================
 async def set_commands(app: Application):
